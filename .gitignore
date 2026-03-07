@@ -1,0 +1,15 @@
+# Environment variables (contains tokens and secrets)
+.env
+
+# OpenClaw runtime data (config, sessions, credentials)
+openclaw-data/
+
+# Auto-generated Docker Compose override files
+docker-compose.override.yml
+docker-compose.extra.yml
+docker-compose.sandbox.yml
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
