@@ -65,21 +65,30 @@ docker compose run --rm openclaw-cli configure
 docker compose restart openclaw-gateway
 ```
 
-## Configure Channels (optional)
+## Configure Channels (Telegram)
+
+Add the bot token in `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=<your_bot_token_from_BotFather>
+```
+
+Then run the interactive setup wizard:
 
 ```bash
-# Telegram
-docker compose run --rm openclaw-cli channels add --channel telegram --token "<bot_token>"
-
-# Discord
-docker compose run --rm openclaw-cli channels add --channel discord --token "<bot_token>"
-
-# WhatsApp (QR code)
-docker compose run --rm openclaw-cli channels login
-
-# Restart after channel changes
+docker compose run --rm -it openclaw-cli configure
+# Select Telegram channel, follow prompts
 docker compose restart openclaw-gateway
 ```
+
+DM your bot on Telegram, then approve the pairing:
+
+```bash
+docker compose run --rm openclaw-cli pairing list telegram
+docker compose run --rm openclaw-cli pairing approve telegram <CODE>
+```
+
+Or approve directly in the Web UI (http://127.0.0.1:18789/).
 
 ## Common Commands
 
@@ -114,10 +123,73 @@ For Docker image pulls, configure the proxy in **Docker Desktop → Settings →
 .env.example         # Template (committed to git)
 .env                 # Your actual config (git-ignored, contains secrets)
 docker-compose.yml   # Service definitions (cross-platform)
-openclaw-data/       # Runtime data (git-ignored)
-  config/            #   OpenClaw config, credentials, sessions
-  workspace/         #   Agent workspace
+start.ps1            # Windows: pull config + start gateway
+stop.ps1             # Windows: stop gateway + push config
+start.sh             # macOS/Linux: pull config + start gateway
+stop.sh              # macOS/Linux: stop gateway + push config
 ```
+
+Config and agent data live in a separate private repo (`openclaw-data`):
+
+```
+openclaw-data/           # Separate private git repo
+  config/
+    openclaw.json        #   Main config (model, channels, gateway settings)
+    agents/              #   Agent model preferences
+    cron/                #   Scheduled tasks
+  workspace/
+    IDENTITY.md          #   Agent persona
+    SOUL.md              #   Agent personality
+    USER.md              #   User info for the agent
+    ...
+```
+
+## Start / Stop Scripts
+
+The scripts auto-sync `openclaw-data` via git:
+
+- **start**: `git pull` → `docker compose up`
+- **stop**: `docker compose down` → `git commit + push`
+
+```bash
+# Windows
+.\start.ps1
+.\stop.ps1
+
+# macOS/Linux
+./start.sh
+./stop.sh
+```
+
+## Setup on a Second Machine
+
+If you already have `openclaw-data` on another machine, clone both repos:
+
+```bash
+# 1. Clone the docker project
+git clone <your-openclaw-docker-repo-url>
+cd openclaw-docker
+
+# 2. Clone your config data (put it next to openclaw-docker, or wherever you like)
+git clone <your-openclaw-data-repo-url> ../openclaw-data
+
+# 3. Create .env from template
+cp .env.example .env
+
+# 4. Edit .env:
+#    - Set OPENCLAW_CONFIG_DIR / OPENCLAW_WORKSPACE_DIR to point to your cloned openclaw-data
+#    - Generate a new gateway token
+#    - Set TELEGRAM_BOT_TOKEN (same token, shared across machines)
+#    - Set proxy if needed (or leave empty)
+
+# 5. Re-authenticate GitHub Copilot (tokens are machine-specific)
+docker compose up -d openclaw-gateway
+docker compose run --rm -it openclaw-cli configure
+# Select GitHub Copilot, complete OAuth flow
+docker compose restart openclaw-gateway
+```
+
+Note: Credentials (GitHub Copilot token, device identity) are machine-specific and git-ignored in `openclaw-data`. You'll need to re-run OAuth on each new machine.
 
 ## Platform Notes
 
